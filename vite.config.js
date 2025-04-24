@@ -3,6 +3,8 @@ import {fileURLToPath, URL} from 'node:url'
 import {defineConfig} from 'vite'
 import vue from '@vitejs/plugin-vue'
 import {NodeGlobalsPolyfillPlugin} from '@esbuild-plugins/node-globals-polyfill';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export default defineConfig({
     plugins: [
@@ -22,7 +24,7 @@ export default defineConfig({
             },
         },
         allowedHosts: [
-            '2adc-109-107-181-94.ngrok-free.app',
+            process.env.HOST
         ],
     },
 

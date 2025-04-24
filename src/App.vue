@@ -5,27 +5,22 @@ import {createSwapWidget} from '@swap-coffee/ui-sdk';
 import {tonConnectConfig} from './config';
 import WebApp from '@twa-dev/sdk';
 import {Address} from "@ton/core";
+import {Api} from "@/api.js";
+
+const api = new Api("https://2adc-109-107-181-94.ngrok-free.app");
 
 const MAIN_WINDOW = 0;
 const HISTORY_WINDOW = 1;
-const window = ref(MAIN_WINDOW);
+const windowRew = ref(MAIN_WINDOW);
 
 const historyData = ref([]);
 
 async function setWindow(id) {
-  window.value = id;
+  windowRew.value = id;
   if (id === MAIN_WINDOW) {
     initializeSwapWidget();
   } else {
-    try {
-      let response = await fetch("https://2adc-109-107-181-94.ngrok-free.app/api/user/latest?" + WebApp.initData);
-      let text = await response.json();
-      historyData.value = text.items;
-      console.log(historyData.value);
-    } catch (e) {
-      console.log("Failed to get latest txs");
-      console.error(e);
-    }
+    historyData.value = await api.getLatestTransactions(WebApp.initData);
   }
 }
 
@@ -75,9 +70,7 @@ async function setProofParams() {
   tonConnectUiInstance.value.setConnectRequestParameters({
     state: 'loading',
   })
-  let res = await fetch("https://2adc-109-107-181-94.ngrok-free.app/api/proof/request-quote");
-  let rawText = await res.text();
-  let text = JSON.parse(rawText)["proof"];
+  let text = await api.requestProof();
   tonConnectUiInstance.value.setConnectRequestParameters({
     state: 'ready',
     value: {tonProof: text},
@@ -93,7 +86,8 @@ let proof = ref(null);
 tonConnectUiInstance.value.onStatusChange(async wallet => {
   isWalletConnected.value = tonConnectUiInstance.value.connected;
   fillWallet(wallet);
-  if (wallet !== null) {
+  console.log(wallet.connectItems);
+  if (wallet.connectItems !== undefined) {
     proof.value = JSON.stringify({
       address: wallet.account.address,
       public_key: wallet.account.publicKey,
@@ -112,18 +106,8 @@ tonConnectUiInstance.value.onStatusChange(async wallet => {
     });
 
     try {
-      await fetch("https://2adc-109-107-181-94.ngrok-free.app/api/user/link?" + WebApp.initData,
-          {
-            method: "POST",
-            body: JSON.stringify({}),
-            headers: {
-              "Content-Type": "application/json",
-              "proof": proof.value,
-            }
-          });
+      await api.linkUser(WebApp.initData, proof.value);
     } catch (e) {
-      console.log("Failed to link users, close");
-      console.error(e);
       await tonConnectUiInstance.value.disconnect();
     }
   }
@@ -131,25 +115,12 @@ tonConnectUiInstance.value.onStatusChange(async wallet => {
   console.error("Error during status changing:" + error);
 });
 
-let routeRef = ref(null);
-
 async function handler(event) {
   console.log('event_transactions_built, details:', event);
   console.log(event);
   let detail = event.detail;
   let routeId = detail.route_id.toString();
-  console.log("RId:" + routeId);
-
-  fetch("https://2adc-109-107-181-94.ngrok-free.app/api/user/routes?" + WebApp.initData,
-      {
-        method: "POST",
-        body: JSON.stringify({route_id: routeId}),
-        headers: {
-          "Content-Type": "application/json",
-          "proof": proof.value,
-        }
-      });
-
+  await api.saveRoute(WebApp.initData, routeId, proof.value);
 }
 
 onMounted(async () => {
@@ -169,11 +140,6 @@ onMounted(async () => {
     console.log(proof);
   });
   window.addEventListener('event_transactions_built', handler);
-  watch(routeRef, async (x) => {
-    console.log("from watch")
-    console.log(x);
-    await handler2(x);
-  })
 });
 
 function formatDate(timestamp) {
@@ -210,7 +176,7 @@ function formatDate(timestamp) {
     <button @click="setWindow(MAIN_WINDOW)">main-window</button>
     <button @click="setWindow(HISTORY_WINDOW)">history-window</button>
   </div>
-  <div v-if="window===0">
+  <div v-if="windowRew===0">
     <div class="app">
       <p>version: {{ version }}</p>
       <h1 class="title">Swap Widget Example</h1>
