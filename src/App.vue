@@ -61,20 +61,20 @@ function fillWallet(wallet) {
 }
 
 async function setProofParams() {
-  if (isWalletConnected.value) {
-    console.log("Already connected, not need to request proof");
-    return
-  }
-  console.log("Start set proof");
-  tonConnectUiInstance.value.setConnectRequestParameters(null);
-  tonConnectUiInstance.value.setConnectRequestParameters({
-    state: 'loading',
-  })
-  let text = await api.requestProof();
-  tonConnectUiInstance.value.setConnectRequestParameters({
-    state: 'ready',
-    value: {tonProof: text},
-  })
+  // if (isWalletConnected.value) {
+  //   console.log("Already connected, not need to request proof");
+  //   return
+  // }
+  // console.log("Start set proof");
+  // tonConnectUiInstance.value.setConnectRequestParameters(null);
+  // tonConnectUiInstance.value.setConnectRequestParameters({
+  //   state: 'loading',
+  // })
+  // let text = await api.requestProof();
+  // tonConnectUiInstance.value.setConnectRequestParameters({
+  //   state: 'ready',
+  //   value: {tonProof: text},
+  // })
 }
 
 setInterval(async () => {
@@ -101,14 +101,14 @@ tonConnectUiInstance.value.onStatusChange(async wallet => {
       console.log(isOk);
       if (err !== null) {
         console.log("Failed to save proof in storage");
-        await tonConnectUiInstance.value.disconnect();
+        // await tonConnectUiInstance.value.disconnect();
       }
     });
 
     try {
-      await api.linkUser(WebApp.initData, proof.value);
+      // await api.linkUser(WebApp.initData, proof.value);
     } catch (e) {
-      await tonConnectUiInstance.value.disconnect();
+      // await tonConnectUiInstance.value.disconnect();
     }
   }
 }, async error => {
@@ -120,7 +120,7 @@ async function handler(event) {
   console.log(event);
   let detail = event.detail;
   let routeId = detail.route_id.toString();
-  await api.saveRoute(WebApp.initData, routeId, proof.value);
+  // await api.saveRoute(WebApp.initData, routeId, proof.value);
 }
 
 onMounted(async () => {
@@ -132,7 +132,7 @@ onMounted(async () => {
     if (error !== null) {
       console.log("Failed to get proof, disconnect");
       console.error(error);
-      await tonConnectUiInstance.value.disconnect();
+      // await tonConnectUiInstance.value.disconnect();
       return;
     }
     console.log("Fetched proof ok!")
