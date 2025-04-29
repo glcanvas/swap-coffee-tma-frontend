@@ -24,6 +24,7 @@ async function setWindow(id) {
     initializeSwapWidget();
   } else {
     historyData.value = await api.getLatestTransactions(WebApp.initData);
+    console.log(historyData.value);
   }
 }
 
@@ -87,20 +88,20 @@ function fillWalletInfo(wallet) {
 }
 
 async function setProofParams() {
-  // if (isWalletConnected.value) {
-  //   console.log("Already connected, not need to request proof");
-  //   return
-  // }
-  // console.log("Start set proof");
-  // tonConnectUiInstance.value.setConnectRequestParameters(null);
-  // tonConnectUiInstance.value.setConnectRequestParameters({
-  //   state: 'loading',
-  // })
-  // let text = await api.requestProof();
-  // tonConnectUiInstance.value.setConnectRequestParameters({
-  //   state: 'ready',
-  //   value: {tonProof: text},
-  // })
+  if (isWalletConnected.value) {
+    console.log("Already connected, not need to request proof");
+    return
+  }
+  console.log("Start set proof");
+  tonConnectUiInstance.value.setConnectRequestParameters(null);
+  tonConnectUiInstance.value.setConnectRequestParameters({
+    state: 'loading',
+  })
+  let text = await api.requestProof();
+  tonConnectUiInstance.value.setConnectRequestParameters({
+    state: 'ready',
+    value: {tonProof: text},
+  })
 }
 
 setInterval(async () => {
@@ -112,7 +113,6 @@ let proof = ref(null);
 tonConnectUiInstance.value.onStatusChange(async wallet => {
   isWalletConnected.value = tonConnectUiInstance.value.connected;
   fillWallet(wallet);
-  console.log(wallet.connectItems);
   if (wallet.connectItems !== undefined) {
     proof.value = JSON.stringify({
       address: wallet.account.address,
@@ -123,18 +123,16 @@ tonConnectUiInstance.value.onStatusChange(async wallet => {
 
     WebApp.CloudStorage.setItem("proof", proof.value, async (err, isOk) => {
       console.log("CloudStorage.setItem");
-      console.log(err);
-      console.log(isOk);
       if (err !== null) {
         console.log("Failed to save proof in storage");
-        // await tonConnectUiInstance.value.disconnect();
+        await tonConnectUiInstance.value.disconnect();
       }
     });
 
     try {
-      // await api.linkUser(WebApp.initData, proof.value);
+      await api.linkUser(WebApp.initData, proof.value);
     } catch (e) {
-      // await tonConnectUiInstance.value.disconnect();
+      await tonConnectUiInstance.value.disconnect();
     }
   }
 }, async error => {
@@ -142,11 +140,15 @@ tonConnectUiInstance.value.onStatusChange(async wallet => {
 });
 
 async function handler(event) {
-  console.log('event_transactions_built, details:', event);
-  console.log(event);
-  let detail = event.detail;
-  let routeId = detail.route_id.toString();
-  // await api.saveRoute(WebApp.initData, routeId, proof.value);
+  try {
+    console.log('event_transactions_built, details:', event);
+    console.log(event);
+    let detail = event.detail;
+    let routeId = detail.route_id.toString();
+    await api.saveRoute(WebApp.initData, routeId, proof.value);
+  } catch (t) {
+    console.error(t);
+  }
 }
 
 onMounted(async () => {
@@ -158,7 +160,7 @@ onMounted(async () => {
     if (error !== null) {
       console.log("Failed to get proof, disconnect");
       console.error(error);
-      // await tonConnectUiInstance.value.disconnect();
+      await tonConnectUiInstance.value.disconnect();
       return;
     }
     console.log("Fetched proof ok!")
@@ -199,7 +201,7 @@ function formatDate(timestamp) {
             v-show="isWalletConnected"
             class="header__dex-wallet"
         >
-          <img :src="walletInfo?.imgUrl" alt="wallet logo" class="header__dex-image" />
+          <img :src="walletInfo?.imgUrl" alt="wallet logo" class="header__dex-image"/>
           <p class="header__dex-address">
             {{ getTrimAddress() }}
           </p>
@@ -242,7 +244,7 @@ function formatDate(timestamp) {
 
     <div class="app__main">
       <div v-if="windowRew===0">
-        <div >
+        <div>
           <div id="swap-widget-component"></div>
         </div>
       </div>
